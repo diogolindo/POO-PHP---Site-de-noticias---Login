@@ -39,31 +39,34 @@ class Usuario{
         if(isset($_POST["enviar"])){
             /*testa se é novo usuário*/
             if(empty($_POST["id"])){
-                $this->setNome($_POST["nome"]);
-                $this->setEmail($_POST["email"]);
-                $senhaForm = "info63a";
-                $this->setSenha($senhaForm);
+                $obj = new Usuario;
+
+                $obj->setNome($_POST["nome"]);
+                $obj->setEmail($_POST["email"]);
+                $senhaForm = md5("info123");
+                $obj->setSenha($senhaForm);
 
                 //salva no bd pela classe conexao
                 $conexao=Conexao::getConexao();
-                $sql="INSERT INTO usuario (nome, email, senha) VALUES ('".$this->getNome()."', '".$this->getEmail()."', '".$this->getSenha()."')";
+                $sql="INSERT INTO usuario (nome, email, senha) VALUES ('".$obj->getNome()."', '".$obj->getEmail()."', '".$obj->getSenha()."')";
                 $conexao->query($sql);
 
                 //mensagem se deu certo (usuário salvo no bd)
                 $sql = $conexao->query("
                 SELECT id
                 FROM usuario
-                WHERE email = '".$this->getEmail()."' AND nome = '".$this->getNome()."' AND senha = '".$this->getSenha()."'"
+                WHERE email = '".$obj->getEmail()."' AND nome = '".$obj->getNome()."' AND senha = '".$obj->getSenha()."'"
                 );
-                $result = $sql->fetch(PDO::FETCH_ASSOC);
-                if(is_string($result['id'])){
+                $result = $sql->fetch(PDO::FETCH_OBJ);
+                if(is_string($result->id)){
                     echo "<h2>Novo usuário salvo com sucesso!</h2>";
                 }
                 else{
                     echo "<h2>Falha ao salvar novo usuário!</h2>";
                 }
                 //recarregar página
-                $this->login();
+                $_SESSION['auxID'] = $result->id;
+                include HOME_DIR."view/paginas/usuarios/primeiroAcesso.php";
             }else{
                 $sql="UPDATE usuario SET nome=".$_POST["nome"].", email=".$_POST["email"];
             }
@@ -76,31 +79,41 @@ class Usuario{
         include HOME_DIR."view/paginas/usuarios/login.php";
     }
 
+    public function primeiro(){
+        if(isset($_POST["enviar"])){
+            $id = $_SESSION['auxID'];
+            echo $id;
+            $senha = md5($_POST["senha"]);
+            echo " | ".$senha;
+            $conexao=Conexao::getConexao();
+            $conexao->query("UPDATE usuario SET senha='".$senha."' WHERE id =".$this->id."");
+            $conexao->query("
+                UPDATE usuario
+                SET senha = '".$senha."'
+                WHERE id = '".$_SESSION['auxID']."'"
+            );
+            $this->login();
+        }
+    }
+
     public function entrar(){
         if(isset($_POST["enviar"])){
-            $this->setSenha(md5($_POST["senha"]));
-            $this->setEmail($_POST["email"]);
+            $obj = new Usuario;
+            $obj->setSenha(md5($_POST["senha"]));
+            $obj->setEmail($_POST["email"]);
 
             //conecta e procura se há conta com os dados
             $conexao=Conexao::getConexao();
             $sql = $conexao->query("
                 SELECT *
                 FROM usuario
-                WHERE email = '".$this->getEmail()."' AND senha = '".$this->getSenha()."'"
+                WHERE email = '".$obj->getEmail()."' AND senha = '".$obj->getSenha()."'"
             );
-            $result = $sql->fetch(PDO::FETCH_ASSOC);
+            $result = $sql->fetch(PDO::FETCH_OBJ);
             
             //se há conta
-            if(isset($result['id']) && isset($result['nome']) && isset($result['senha']) && isset($result['email'])){
-                //cria sessão se não existir outra
-                if(!isset($_SESSION['id'])){
-                    $this->session($result['id'], $result['nome'], $result['senha'], $result['email']);
-                }
-                else{
-                    session_unset();
-                    session_destroy();
-                    $this->session($result['id'], $result['nome'], $result['senha'], $result['email']);
-                }
+            if(isset($result->id) && isset($result->nome) && isset($result->senha) && isset($result->email)){
+                $this->session($result->id, $result->nome, $result->email, $_POST["senha"]);
             }
             else{
                 echo "<h2>Dados repassados inválidos!</h2>";
@@ -114,8 +127,12 @@ class Usuario{
         $_SESSION['nome'] = $nome;
         $_SESSION['email'] = $email;
         $_SESSION['senha'] = $senha;
-        echo "<h2>Logado!</h2>";
-        $this->listar();
+
+        if($_SESSION['id'] == null){
+            $this->login();
+        }else{
+            $this->listar();
+        }
     }
 
 
@@ -131,18 +148,19 @@ class Usuario{
 
     public function update(){
         if(isset($_POST["enviar"])){
-            $this->setSenha(md5($_POST["senha"]));
-            $this->setEmail($_POST["email"]);
-            $this->setNome($_POST["nome"]);
+            $obj = new Usuario;
+            $obj->setSenha(md5($_POST["senha"]));
+            $obj->setEmail($_POST["email"]);
+            $obj->setNome($_POST["nome"]);
 
             $conexao=Conexao::getConexao();
             $conexao->query("
                 UPDATE usuario
-                SET nome = '".$this->getNome()."', email = '".$this->getEmail()."', senha = '".$this->getSenha()."'
+                SET nome = '".$obj->getNome()."', email = '".$obj->getEmail()."', senha = '".$obj->getSenha()."'
                 WHERE id = '".$_SESSION['id']."'"
             );
             
-            $_SESSION['senha'] = md5($_POST["senha"]);
+            $_SESSION['senha'] = $_POST["senha"];
             $_SESSION['email'] = $_POST["email"];
             $_SESSION['nome'] = $_POST["nome"];
             
