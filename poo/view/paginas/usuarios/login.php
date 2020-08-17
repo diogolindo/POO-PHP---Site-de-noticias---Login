@@ -2,12 +2,11 @@
     <form action="<?php echo HOME_URI;?>usuario/entrar" method="POST">
         <fieldset>
             <legend>Login de usuário</legend>
-            <h4>Você será desconectado se estiver logado à alguma conta</h4>
             <div class="row">
                 <input type="text" name="email" placeholder="Email"/>
             </div>
             <div class="row">
-                <input type="text" name="senha" placeholder="senha"/>
+                <input type="text" name="nome" placeholder="nome"/>
             </div>
             <div class="row">
                 <input type="submit" name="enviar" value="Enviar" />

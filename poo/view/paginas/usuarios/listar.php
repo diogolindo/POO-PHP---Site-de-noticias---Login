@@ -7,8 +7,6 @@ if(isset($_SESSION['nome'])){
 ?>
 </h1>
 
-<a href="<?php echo HOME_URI;?>usuario/criar" class="btn">Criar conta</a>
-<a href="<?php echo HOME_URI;?>usuario/login" class="btn">Logar</a>
 <a href="<?php echo HOME_URI;?>usuario/edit" class="btn">Editar conta</a>
 <a href="<?php echo HOME_URI;?>usuario/dados" class="btn">Dados da conta</a>
 <a href="<?php echo HOME_URI;?>usuario/sair" class="btn">Sair</a>

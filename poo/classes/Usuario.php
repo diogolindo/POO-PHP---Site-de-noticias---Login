@@ -18,15 +18,20 @@ class Usuario{
 
     //-------------------------------------------listar
     public function listar(){
-        $conexao=Conexao::getConexao();
-        $resultado=$conexao->query(
-            "SELECT id, nome, email FROM usuario"
-        );
-        $usuarios=null;
-        while($usuario=$resultado->fetch(PDO::FETCH_OBJ)){
-            $usuarios[]=$usuario;
+        if(!isset($_SESSION['id'])){
+            $this->login();
         }
-        include HOME_DIR."view/paginas/usuarios/listar.php";
+        else{
+            $conexao=Conexao::getConexao();
+            $resultado=$conexao->query(
+                "SELECT id, nome, email FROM usuario"
+            );
+            $usuarios=null;
+            while($usuario=$resultado->fetch(PDO::FETCH_OBJ)){
+                $usuarios[]=$usuario;
+            }
+            include HOME_DIR."view/paginas/usuarios/listar.php";
+        }
     }
 
 
@@ -64,9 +69,7 @@ class Usuario{
                 else{
                     echo "<h2>Falha ao salvar novo usuário!</h2>";
                 }
-                //recarregar página
-                $_SESSION['auxID'] = $result->id;
-                include HOME_DIR."view/paginas/usuarios/primeiroAcesso.php";
+                include HOME_DIR."view/paginas/usuarios/login.php";
             }else{
                 $sql="UPDATE usuario SET nome=".$_POST["nome"].", email=".$_POST["email"];
             }
@@ -81,25 +84,23 @@ class Usuario{
 
     public function primeiro(){
         if(isset($_POST["enviar"])){
-            $id = $_SESSION['auxID'];
-            echo $id;
             $senha = md5($_POST["senha"]);
-            echo " | ".$senha;
+            $id = $_SESSION['id'];
             $conexao=Conexao::getConexao();
-            $conexao->query("UPDATE usuario SET senha='".$senha."' WHERE id =".$this->id."");
             $conexao->query("
                 UPDATE usuario
                 SET senha = '".$senha."'
-                WHERE id = '".$_SESSION['auxID']."'"
+                WHERE id = '".$id."'"
             );
-            $this->login();
+            
+            $this->listar();
         }
     }
 
     public function entrar(){
         if(isset($_POST["enviar"])){
             $obj = new Usuario;
-            $obj->setSenha(md5($_POST["senha"]));
+            $obj->setNome($_POST["nome"]);
             $obj->setEmail($_POST["email"]);
 
             //conecta e procura se há conta com os dados
@@ -107,13 +108,22 @@ class Usuario{
             $sql = $conexao->query("
                 SELECT *
                 FROM usuario
-                WHERE email = '".$obj->getEmail()."' AND senha = '".$obj->getSenha()."'"
+                WHERE email = '".$obj->getEmail()."' AND nome = '".$obj->getNome()."'"
             );
             $result = $sql->fetch(PDO::FETCH_OBJ);
             
             //se há conta
             if(isset($result->id) && isset($result->nome) && isset($result->senha) && isset($result->email)){
-                $this->session($result->id, $result->nome, $result->email, $_POST["senha"]);
+                //se for primeiro acesso
+                if($result->senha == md5("info123")){
+                    echo "passou";
+                    include HOME_DIR."view/paginas/usuarios/primeiroAcesso.php";
+                    $this->session($result->id, $result->nome, $result->email);
+                }
+                else{
+                    include HOME_DIR."view/paginas/usuarios/loginSenha.php";
+                    $this->session($result->id, $result->nome, $result->email);
+                }
             }
             else{
                 echo "<h2>Dados repassados inválidos!</h2>";
@@ -122,17 +132,38 @@ class Usuario{
         }
     }
 
-    public function session($id, $nome, $email, $senha){
+    public function loginSenha(){
+        if(isset($_POST["enviar"])){
+            $senha = md5($_POST["senha"]);
+            $id = $_SESSION['id'];
+            $conexao=Conexao::getConexao();
+            $sql = $conexao->query("
+                SELECT id
+                FROM usuario
+                WHERE email = '".$_SESSION['email']."' AND nome = '".$_SESSION['nome']."' AND senha ='".$senha."'"
+            );
+            $result = $sql->fetch(PDO::FETCH_OBJ);
+            if(isset($result->id) && $result->id == $id){
+                $this->listar();
+            }
+            else{
+                echo "<h2>Senha repassada inválida!</h2>";
+                include HOME_DIR."view/paginas/usuarios/loginSenha.php";
+            }
+            
+        }
+    }
+
+    public function session($id, $nome, $email){
         $_SESSION['id'] = $id;
         $_SESSION['nome'] = $nome;
         $_SESSION['email'] = $email;
-        $_SESSION['senha'] = $senha;
 
-        if($_SESSION['id'] == null){
+        /*if($_SESSION['id'] == null){
             $this->login();
         }else{
             $this->listar();
-        }
+        }*/
     }
 
 
@@ -147,25 +178,33 @@ class Usuario{
     }
 
     public function update(){
-        if(isset($_POST["enviar"])){
-            $obj = new Usuario;
-            $obj->setSenha(md5($_POST["senha"]));
-            $obj->setEmail($_POST["email"]);
-            $obj->setNome($_POST["nome"]);
-
-            $conexao=Conexao::getConexao();
-            $conexao->query("
-                UPDATE usuario
-                SET nome = '".$obj->getNome()."', email = '".$obj->getEmail()."', senha = '".$obj->getSenha()."'
-                WHERE id = '".$_SESSION['id']."'"
-            );
-            
-            $_SESSION['senha'] = $_POST["senha"];
-            $_SESSION['email'] = $_POST["email"];
-            $_SESSION['nome'] = $_POST["nome"];
-            
-            echo "<h2>Usuário atualizado com sucesso!</h2>";
-            $this->listar();
+        if(!isset($_SESSION['id'])){
+            $this->login();
+        }
+        else{
+            if(isset($_POST["enviar"])){
+                $obj = new Usuario;
+                $obj->setSenha(md5($_POST["senha"]));
+                $obj->setEmail($_POST["email"]);
+                $obj->setNome($_POST["nome"]);
+                $obj->setId($_SESSION['id']);
+                var_dump($_SESSION['id']);
+    
+                $conexao=Conexao::getConexao();
+                $conexao->query("
+                    UPDATE usuario
+                    SET nome = '".$obj->getNome()."', email = '".$obj->getEmail()."', senha = '".$obj->getSenha()."'
+                    WHERE id = '".$obj->getId()."'"
+                );
+                
+                
+                $_SESSION['senha'] = $_POST["senha"];
+                $_SESSION['email'] = $_POST["email"];
+                $_SESSION['nome'] = $_POST["nome"];
+                
+                echo "<h2>Usuário atualizado com sucesso!</h2>";
+                $this->listar();
+            }
         }
     }
 
