@@ -1,0 +1,4 @@
+usuário: id14602327_diogokrupp
+nomeDB: id14602327_sistema_noticias
+localhost: localhost
+senha: 9Z&Iwe0hznH7Z9>1
